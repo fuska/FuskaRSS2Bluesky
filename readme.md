@@ -83,7 +83,3 @@ https://example.com/2024/11/xyz
 
 ## License
 This project is open-source and available under the [MIT License](LICENSE).
-
----
-
-Let me know if you’d like further customization or additions to the README!
