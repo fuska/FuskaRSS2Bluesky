@@ -10,7 +10,7 @@ from PIL import Image
 # Set up environment variables
 BLUESKY_USERNAME = os.getenv("BLUESKY_USERNAME")
 BLUESKY_PASSWORD = os.getenv("BLUESKY_PASSWORD")
-RSS_FEED_URL = "https://chicagoyimby.com/feed"
+RSS_FEED_URL = os.getenv("RSS_FEED_URL")
 
 # Initialize the Bluesky client
 client = Client()
