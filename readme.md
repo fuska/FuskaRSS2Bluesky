@@ -1,7 +1,3 @@
-Here’s a README for your Bluesky RSS posting bot:
-
----
-
 # Bluesky RSS Posting Bot
 
 This Python bot automatically posts updates from an RSS feed to your Bluesky feed. It checks the feed regularly, pulls the latest article, and creates a post with a clickable link and an optional header image. The bot also avoids duplicate posts by keeping track of previously posted articles.
