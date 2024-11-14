@@ -6,6 +6,10 @@ from io import BytesIO
 import os
 import time
 from PIL import Image
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set up environment variables
 BLUESKY_USERNAME = os.getenv("BLUESKY_USERNAME")
