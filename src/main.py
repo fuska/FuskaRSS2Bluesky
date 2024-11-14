@@ -1,6 +1,6 @@
 import time
 import logging
-from bot import BotLogic
+from bot.bot_logic import BotLogic
 from utils.logging_config import setup_logging
 
 # Set up logging

@@ -13,7 +13,7 @@ def fetch_new_rss_entries(db_handler):
         # Only add entries that haven't been posted and are recent
         if not db_handler.is_posted(title) and published >= datetime(2024, 11, 13):
             # Add image URL if available
-            entry.image_url = entry.get("image_url")
+            entry.image_url = entry.get("image_url", None)
             new_entries.append(entry)
 
     return new_entries

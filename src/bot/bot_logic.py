@@ -2,8 +2,8 @@ import time
 from atproto import Client
 from bot.db_handler import DatabaseHandler
 from bot.post_handler import PostHandler
-from utils import fetch_new_rss_entries
-from config import BLUESKY_USERNAME, BLUESKY_PASSWORD
+from utils.rss_parser import fetch_new_rss_entries
+from settings import BLUESKY_USERNAME, BLUESKY_PASSWORD
 
 class BotLogic:
     def __init__(self, interval=600, max_retries=5, initial_delay=10):
