@@ -11,7 +11,7 @@ class PostHandler:
 
     def post_entry(self, entry):
         title = entry.title
-        link = entry.link.rstrip('.html')
+        link = entry.link  # Remove the rstrip('.html') to keep the full URL
 
         # Create post text with a clickable link
         post_text = client_utils.TextBuilder().text(
