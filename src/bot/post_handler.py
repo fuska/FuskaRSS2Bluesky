@@ -12,7 +12,7 @@ class PostHandler:
 
     def post_entry(self, entry):
         title = entry.title
-        link = entry.link.rstrip('.html')
+        link = entry.link  # Remove the rstrip('.html') to keep the full URL
 
         # Use configured post format, defaulting to original format if not specified
         post_format = config['bot'].get('post_format', "{title}\n\nRead more: {link}")
