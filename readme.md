@@ -6,6 +6,7 @@ This Python bot automatically posts updates from an RSS feed to your Bluesky fee
 - Automatically fetches and posts new articles from the RSS feed
 - Creates formatted posts with clickable links to articles
 - Smart image handling:
+  - Configurable image posting (can be enabled/disabled)
   - Automatically retrieves header images from article pages
   - Compresses images to meet Bluesky's size requirements
   - Falls back to text-only posts if image processing fails
@@ -22,6 +23,7 @@ This Python bot automatically posts updates from an RSS feed to your Bluesky fee
   - Adjustable retry settings
   - Configurable logging levels
   - Minimum post date filtering
+  - Toggle image posting on/off
 
 ## Requirements
 - Python 3.8+
@@ -68,6 +70,17 @@ The bot uses a `config.yaml` file for customizable settings:
 - Logging level and format
 - Minimum post date filter
 - Number of recent posts to check for duplicates
+- Image posting toggle (`include_images` under bot settings)
+
+Example configuration:
+```yaml
+bot:
+  check_interval: 600  # seconds
+  max_retries: 5
+  initial_delay: 10
+  posts_to_check: 50
+  include_images: true  # Set to false to disable image posting
+```
 
 ### 5. Run the Bot
 Start the bot using:
@@ -84,14 +97,14 @@ python src/main.py
    - Checks SQLite database for previously posted articles
    - Verifies against recent Bluesky posts as a backup
    - Automatically syncs any posts found on Bluesky but missing from database
-3. **Image Processing**:
+3. **Image Processing** (if enabled):
    - Attempts to extract header image from article
    - Compresses image to meet Bluesky's size limits
    - Gracefully falls back to text-only if image processing fails
 4. **Post Formatting**:
    - Creates formatted post with article title
    - Adds clickable link to article
-   - Attaches processed image if available
+   - Attaches processed image if available and enabled
 5. **Error Handling**:
    - Implements exponential backoff for login attempts
    - Handles rate limits automatically

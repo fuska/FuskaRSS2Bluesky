@@ -8,6 +8,7 @@ bot:
   max_retries: 5
   initial_delay: 10
   posts_to_check: 50  # Number of recent posts to check for duplicates
+  include_images: true  # Feature flag to control whether posts include images
 
 # Logging
 logging:
