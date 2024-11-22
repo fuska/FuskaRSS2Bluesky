@@ -18,8 +18,8 @@ class PostHandler:
             f"{title}\n\nRead more: "
         ).link(link, link)
 
-        # Attempt to get image URL from the entry; if not present, fetch it from the article page
-        image_url = entry.get('image_url') or fetch_image_url(link)
+        # Access image_url directly as a property
+        image_url = entry.image_url or fetch_image_url(link)
         if image_url:
             logger.info(f"Attempting to download and compress image: {image_url}")
             compressed_image_data = download_and_compress_image(image_url)

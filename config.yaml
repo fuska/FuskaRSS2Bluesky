@@ -1,0 +1,15 @@
+# RSS Feed Configuration
+rss:
+  min_post_date: "2024-11-13"  # Format: YYYY-MM-DD
+
+# Bot Settings
+bot:
+  check_interval: 600  # seconds
+  max_retries: 5
+  initial_delay: 10
+  posts_to_check: 50  # Number of recent posts to check for duplicates
+
+# Logging
+logging:
+  level: INFO
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'

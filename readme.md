@@ -3,11 +3,25 @@
 This Python bot automatically posts updates from an RSS feed to your Bluesky feed. It checks the feed regularly, retrieves new articles, and creates posts with clickable links and optional header images. The bot uses a database to avoid duplicate posts by tracking previously posted articles, even across sessions.
 
 ## Features
-- Automatically fetches and posts new articles from the RSS feed.
-- Embeds clickable links to the articles within each post.
-- Retrieves and compresses the header image from the article page, posting it alongside the text.
-- Prevents duplicate posts by keeping track of posted articles in a persistent SQLite database.
-- Configurable to support any RSS feed URL, allowing for easy customization.
+- Automatically fetches and posts new articles from the RSS feed
+- Creates formatted posts with clickable links to articles
+- Smart image handling:
+  - Automatically retrieves header images from article pages
+  - Compresses images to meet Bluesky's size requirements
+  - Falls back to text-only posts if image processing fails
+- Robust duplicate prevention:
+  - Uses SQLite database to track all posted articles
+  - Double-checks against recent Bluesky posts as backup
+  - Automatically syncs missing posts to database
+- Reliable operation:
+  - Implements exponential backoff for login attempts
+  - Handles rate limits automatically
+  - Includes comprehensive error handling and logging
+- Highly configurable through YAML:
+  - Customizable check intervals
+  - Adjustable retry settings
+  - Configurable logging levels
+  - Minimum post date filtering
 
 ## Requirements
 - Python 3.8+
@@ -17,7 +31,8 @@ This Python bot automatically posts updates from an RSS feed to your Bluesky fee
   - `beautifulsoup4`
   - `Pillow`
   - `atproto`
-  - `dotenv`
+  - `python-dotenv`
+  - `pyyaml`
 
 ## Setup Instructions
 
@@ -37,13 +52,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Set Up Environment Variables
-The bot requires your Bluesky credentials and the RSS feed URL to monitor. You can provide these via environment variables:
-
-- `BLUESKY_USERNAME`: Your Bluesky username (e.g., `yourusername@bsky.social`)
-- `BLUESKY_PASSWORD`: Your Bluesky password
-- `RSS_FEED_URL`: The RSS feed URL to monitor for new articles
-
-Create a `.env` file in the root directory of the project with the following content:
+Create a `.env` file in the root directory with your credentials:
 
 ```env
 BLUESKY_USERNAME=yourusername@bsky.social
@@ -51,49 +60,82 @@ BLUESKY_PASSWORD=yourpassword
 RSS_FEED_URL=https://example.com/feed
 ```
 
-### 4. Run the Bot
-Once your environment is set up, run the bot using:
+### 4. Configure Settings (Optional)
+The bot uses a `config.yaml` file for customizable settings:
+- Check interval for new posts
+- Maximum retry attempts
+- Initial delay between retries
+- Logging level and format
+- Minimum post date filter
+- Number of recent posts to check for duplicates
+
+### 5. Run the Bot
+Start the bot using:
 
 ```bash
 python src/main.py
 ```
 
-The bot will check the RSS feed every 10 minutes for new articles and post them to Bluesky if they haven’t already been posted.
-
-### Example Post
-Here’s an example of how a post might look on Bluesky:
-
-```
-Additional Funding Approved For Next Phase Of Lathrop Homes Redevelopment
-
-Read more:
-https://example.com/2024/11/xyz
-```
-
 ## How It Works
-1. **Fetch RSS Feed**: The bot retrieves the latest articles from the RSS feed.
-2. **Duplicate Check**: It checks each article title against the entries in the SQLite database. If the article has already been posted, it skips posting.
-3. **Post Creation**:
-   - **Text**: Creates a post with the article title and a clickable link to the article.
-   - **Image**: If available, it retrieves the header image from the article page, compresses it to be under 1000 KB, and posts it alongside the text.
-4. **Automatic Posting**: The bot posts new articles to your Bluesky feed and records them in the database to prevent reposting.
 
-## Using This Bot for Your Own RSS Feed
+### Post Creation Process
+1. **RSS Fetching**: Regularly checks the RSS feed for new articles
+2. **Duplicate Detection**:
+   - Checks SQLite database for previously posted articles
+   - Verifies against recent Bluesky posts as a backup
+   - Automatically syncs any posts found on Bluesky but missing from database
+3. **Image Processing**:
+   - Attempts to extract header image from article
+   - Compresses image to meet Bluesky's size limits
+   - Gracefully falls back to text-only if image processing fails
+4. **Post Formatting**:
+   - Creates formatted post with article title
+   - Adds clickable link to article
+   - Attaches processed image if available
+5. **Error Handling**:
+   - Implements exponential backoff for login attempts
+   - Handles rate limits automatically
+   - Logs all operations for debugging
 
-To use this bot with your own RSS feed:
-1. Set the `RSS_FEED_URL` in the `.env` file to your desired feed URL.
-2. Update `BLUESKY_USERNAME` and `BLUESKY_PASSWORD` with your own Bluesky credentials.
-3. Run the bot using `python src/main.py`. The bot will continuously monitor the feed and post new articles as they are published.
+### Post Format Example
+```
+Article Title
+
+Read more: https://example.com/article-link
+[Attached Image]
+```
+
+## Reliability Features
+
+### Error Handling
+- Exponential backoff for login attempts
+- Automatic retry on rate limits
+- Graceful fallbacks for image processing
+- Comprehensive logging for debugging
+
+### Duplicate Prevention
+- Primary check against SQLite database
+- Secondary check against recent Bluesky posts
+- Automatic database synchronization
+- Configurable number of posts to check
+
+### Rate Limit Management
+- Built-in delays between posts
+- Automatic handling of API rate limits
+- Configurable retry settings
 
 ## Troubleshooting
-- **Login Issues**: Ensure your Bluesky credentials are correct. If you encounter issues, double-check your username and password in the `.env` file.
-- **Image Size**: If the bot fails to post due to image size, it will skip the image and post text-only.
-- **Duplicate Posts**: The bot uses an SQLite database (`posts.db`) to track posted articles, ensuring duplicates are avoided across sessions.
 
-## Future Improvements
-- **Multi-feed Support**: Add support for multiple RSS feeds.
-- **Customizable Posting Interval**: Allow users to set the check interval.
-- **Enhanced Error Handling**: Improve error handling for network issues or feed parsing errors.
+### Common Issues
+- **Login Failures**: The bot will automatically retry with exponential backoff
+- **Image Processing**: Falls back to text-only posts if image processing fails
+- **Database Sync**: Automatically repairs database if posts are found on Bluesky but missing from local storage
+- **Rate Limits**: Handled automatically with configurable delays
+
+### Logging
+- Configurable logging levels in `config.yaml`
+- Detailed error messages for debugging
+- Operation tracking for monitoring
 
 ## License
 This project is open-source and available under the [MIT License](LICENSE).

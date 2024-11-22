@@ -2,33 +2,107 @@ import feedparser
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
-from settings import MIN_POST_DATE  # Import the minimum post date
+from typing import Callable, List
+import logging
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import os
 
-def fetch_new_rss_entries(db_handler):
-    """Fetch new RSS entries that haven’t been posted yet."""
-    feed = feedparser.parse("https://chicagoyimby.com/feed")
-    new_entries = []
+logger = logging.getLogger(__name__)
 
-    for entry in feed.entries:
-        title = entry.title
-        published = datetime(*entry.published_parsed[:6])  # Convert to datetime
+class RSSEntry:
+    def __init__(self, title: str, link: str, published: datetime, image_url: str = None):
+        self.title = title
+        self.link = link
+        self.published = published
+        self.image_url = image_url
 
-        # Only add entries that haven't been posted and are recent
-        if not db_handler.is_posted(title) and published >= MIN_POST_DATE:
-            # Fetch the image URL from the article page
-            image_url = fetch_image_url(entry.link)
-            entry.image_url = image_url
-            new_entries.append(entry)
+def create_session():
+    """Create a requests session with retry logic."""
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504]
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
 
-    return new_entries
+def fetch_image_url(article_url: str, session: requests.Session) -> str:
+    """
+    Extracts the header image URL from the article page with improved error handling.
+    """
+    try:
+        response = session.get(article_url, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Try multiple image sources in order of preference
+        image_sources = [
+            ('meta', {'property': 'og:image'}, 'content'),
+            ('meta', {'name': 'twitter:image'}, 'content'),
+            ('img', {'class': 'wp-post-image'}, 'src'),
+            ('img', {}, 'src')
+        ]
+        
+        for tag, attrs, attr_name in image_sources:
+            element = soup.find(tag, attrs)
+            if element and element.get(attr_name):
+                return element[attr_name]
+        
+        return None
+    except Exception as e:
+        logger.error(f"Error fetching image from {article_url}: {e}")
+        return None
 
-def fetch_image_url(article_url):
-    """Extracts the header image URL from the article page."""
-    response = requests.get(article_url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    image_tag = soup.find('meta', property='og:image') or soup.find('img')
-    if image_tag and image_tag.get('content'):
-        return image_tag['content']
-    elif image_tag and image_tag.get('src'):
-        return image_tag['src']
-    return None
+def fetch_new_rss_entries(is_posted_check: Callable[[str], bool], min_post_date: str) -> List[RSSEntry]:
+    """
+    Fetch new RSS entries that haven't been posted yet.
+    
+    Args:
+        is_posted_check: Function to check if a title has been posted
+        min_post_date: Minimum date string in format 'YYYY-MM-DD'
+    """
+    try:
+        feed = feedparser.parse(os.getenv("RSS_FEED_URL"))
+        if feed.bozo:  # feedparser encountered an error
+            logger.error(f"Feed parsing error: {feed.bozo_exception}")
+            return []
+
+        new_entries = []
+        min_date = datetime.strptime(min_post_date, "%Y-%m-%d")
+        session = create_session()
+
+        for entry in feed.entries:
+            try:
+                title = entry.title
+                published = datetime(*entry.published_parsed[:6])
+
+                # Skip if already posted or too old
+                if published < min_date:
+                    continue
+                if is_posted_check(title):
+                    logger.debug(f"Skipping already posted entry: {title}")
+                    continue
+
+                # Fetch the image URL from the article page
+                image_url = fetch_image_url(entry.link, session)
+                new_entry = RSSEntry(
+                    title=title,
+                    link=entry.link,
+                    published=published,
+                    image_url=image_url
+                )
+                new_entries.append(new_entry)
+                
+            except Exception as e:
+                logger.error(f"Error processing entry {getattr(entry, 'title', 'unknown')}: {e}")
+                continue
+
+        return new_entries
+
+    except Exception as e:
+        logger.error(f"Error fetching RSS feed: {e}")
+        return []
