@@ -22,8 +22,11 @@ class BotLogic:
         self.max_retries = self.config['bot']['max_retries']
         self.initial_delay = self.config['bot']['initial_delay']
         
-        # Initialize database handler
-        self.db_handler = DatabaseHandler()
+        # Initialize database handler if database checking is enabled
+        if self.config['bot']['duplicate_detection']['check_database']:
+            self.db_handler = DatabaseHandler()
+        else:
+            self.db_handler = None
         
         # Configure logging
         logging.basicConfig(
@@ -91,27 +94,29 @@ class BotLogic:
 
     def _is_already_posted(self, title: str) -> bool:
         """
-        Check if a post with this title already exists in either:
-        1. The database of all posts
-        2. Recent posts on Bluesky (in case of DB issues)
+        Check if a post with this title already exists based on configured duplicate detection settings.
         """
         try:
-            # First check the database
-            if self.db_handler.is_posted(title):
-                self.logger.info(f"Found post in database: {title}")
-                return True
+            # Check database if enabled
+            if self.config['bot']['duplicate_detection']['check_database']:
+                if self.db_handler.is_posted(title):
+                    self.logger.info(f"Found post in database: {title}")
+                    return True
                 
-            # Then check recent posts as a backup
-            recent_posts = self._get_recent_posts()
-            if any(title.lower() in post.lower() for post in recent_posts):
-                self.logger.info(f"Found post in recent Bluesky posts: {title}")
-                # If found in recent posts but not in DB, add it to DB
-                try:
-                    self.db_handler.save_post(title, datetime.now().isoformat())
-                    self.logger.info(f"Added missing post to database: {title}")
-                except Exception as e:
-                    self.logger.error(f"Failed to save post to database: {e}")
-                return True
+            # Check recent Bluesky posts if enabled
+            if self.config['bot']['duplicate_detection']['check_bluesky_backup']:
+                recent_posts = self._get_recent_posts()
+                if any(title.lower() in post.lower() for post in recent_posts):
+                    self.logger.info(f"Found post in recent Bluesky posts: {title}")
+                    # If database sync is enabled and database checking is enabled, sync the post
+                    if (self.config['bot']['duplicate_detection']['auto_sync_to_database'] and 
+                        self.config['bot']['duplicate_detection']['check_database']):
+                        try:
+                            self.db_handler.save_post(title, datetime.now().isoformat())
+                            self.logger.info(f"Added missing post to database: {title}")
+                        except Exception as e:
+                            self.logger.error(f"Failed to save post to database: {e}")
+                    return True
                 
             return False
         except Exception as e:
@@ -138,12 +143,13 @@ class BotLogic:
                         self.logger.info(f"Attempting to post: {entry.title}")
                         self.post_handler.post_entry(entry)
                         
-                        # Save successful posts to database
-                        try:
-                            self.db_handler.save_post(entry.title, entry.published.isoformat())
-                            self.logger.info(f"Successfully saved to database: {entry.title}")
-                        except Exception as e:
-                            self.logger.error(f"Failed to save post to database: {e}")
+                        # Save successful posts to database if enabled
+                        if self.config['bot']['duplicate_detection']['check_database']:
+                            try:
+                                self.db_handler.save_post(entry.title, entry.published.isoformat())
+                                self.logger.info(f"Successfully saved to database: {entry.title}")
+                            except Exception as e:
+                                self.logger.error(f"Failed to save post to database: {e}")
                             
                         self.logger.info(f"Successfully posted: {entry.title}")
                         # Add a small delay between posts to avoid rate limits
@@ -161,7 +167,8 @@ class BotLogic:
 
     def __del__(self):
         """Cleanup resources when the bot is destroyed."""
-        try:
-            self.db_handler.close()
-        except:
-            pass
+        if self.db_handler:
+            try:
+                self.db_handler.close()
+            except:
+                pass

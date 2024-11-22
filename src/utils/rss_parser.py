@@ -7,6 +7,7 @@ import logging
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import os
+from settings import config
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +33,23 @@ def create_session():
 
 def fetch_image_url(article_url: str, session: requests.Session) -> str:
     """
-    Extracts the header image URL from the article page with improved error handling.
+    Extracts the header image URL from the article page based on configured sources.
     """
     try:
         response = session.get(article_url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Try multiple image sources in order of preference
-        image_sources = [
-            ('meta', {'property': 'og:image'}, 'content'),
-            ('meta', {'name': 'twitter:image'}, 'content'),
-            ('img', {'class': 'wp-post-image'}, 'src'),
-            ('img', {}, 'src')
-        ]
+        # Build image sources list based on configuration
+        image_sources = []
+        if config['rss']['image_sources'].get('use_og_image', True):
+            image_sources.append(('meta', {'property': 'og:image'}, 'content'))
+        if config['rss']['image_sources'].get('use_twitter_image', True):
+            image_sources.append(('meta', {'name': 'twitter:image'}, 'content'))
+        if config['rss']['image_sources'].get('use_wp_post_image', True):
+            image_sources.append(('img', {'class': 'wp-post-image'}, 'src'))
+        if config['rss']['image_sources'].get('use_first_image', True):
+            image_sources.append(('img', {}, 'src'))
         
         for tag, attrs, attr_name in image_sources:
             element = soup.find(tag, attrs)

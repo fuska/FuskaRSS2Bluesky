@@ -14,13 +14,14 @@ class PostHandler:
         title = entry.title
         link = entry.link.rstrip('.html')
 
-        # Create post text with a clickable link
+        # Use configured post format, defaulting to original format if not specified
+        post_format = config['bot'].get('post_format', "{title}\n\nRead more: {link}")
         post_text = client_utils.TextBuilder().text(
-            f"{title}\n\nRead more: "
+            post_format.format(title=title, link=link)
         ).link(link, link)
 
         # Only process images if the feature flag is enabled
-        if config['bot'].get('include_images', True):  # Default to True for backward compatibility
+        if config['bot'].get('include_images', True):
             # Access image_url directly as a property
             image_url = entry.image_url or fetch_image_url(link)
             if image_url:
